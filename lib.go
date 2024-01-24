@@ -5,7 +5,6 @@ import (
 	goimports "github.com/incu6us/goimports-reviser/v3/reviser"
 	"go/types"
 	"golang.org/x/tools/go/packages"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -34,7 +33,6 @@ func getGeneratorSourceDir() string {
 
 func getOutputDir() string {
 	generatorSourceDir := getGeneratorSourceDir()
-	log.Println("AFC701F", filepath.Base(generatorSourceDir))
 	if strings.HasPrefix(filepath.Base(generatorSourceDir), "gen_") {
 		return filepath.Dir(generatorSourceDir)
 	}
@@ -65,6 +63,7 @@ func getOutputBasename() string {
 	name := getGeneratorName()
 	name = strings.TrimPrefix(name, "gen_")
 	name = strings.TrimSuffix(name, "_go")
+	name = strings.TrimSuffix(name, ".go")
 	name = name + ".go"
 	return name
 }
@@ -80,12 +79,19 @@ func (f *Field) CapName() string {
 	return strings.ToUpper(f.Name[0:1]) + f.Name[1:]
 }
 
+type Method struct {
+	Name            string
+	Type            string
+	PointerReceiver bool
+}
+
 type Struct struct {
 	StructName    string
 	PackageName   string
 	PackagePath   string
 	GeneratorName string
 	Fields        []*Field
+	Methods       []*Method
 	Imports       []string
 	Data          any
 }
@@ -129,15 +135,14 @@ func GetStructInfo(packageName string, structName string, data any) (struct_ *St
 		Data:          data,
 	}
 	for _, name := range pkg.Types.Scope().Names() {
-		st, ok := pkg.Types.Scope().Lookup(name).Type().Underlying().(*types.Struct)
+		t := pkg.Types.Scope().Lookup(name).Type()
+		st, ok := t.Underlying().(*types.Struct)
 		if !ok {
 			continue
 		}
 		if name != structName {
 			continue
 		}
-		x := st.String()
-		log.Println(x)
 		for i := 0; i < st.NumFields(); i++ {
 			field := st.Field(i)
 			fieldName := field.Name()
@@ -168,6 +173,50 @@ func GetStructInfo(packageName string, structName string, data any) (struct_ *St
 				}
 			}
 			fieldX.Params = Params
+		}
+		methodSet2 := types.NewMethodSet(types.NewPointer(t))
+		for i := 0; i < methodSet2.Len(); i++ {
+			method := methodSet2.At(i)
+			//log.Println(method.Obj().Name())
+			sig := method.Type().(*types.Signature)
+			//x := sig.Variadic() // 可変長 (`...`)
+			//log.Println(x)
+			//recv := sig.Recv()
+			// Receiver type
+			//log.Println("type:", recv.Type())
+			//log.Println(recv.Pos())
+			//params := sig.Params()
+			//log.Println(params.Len())
+			//for j := 0; j < params.Len(); j++ {
+			//	param := params.At(j)
+			//	//log.Println("name:", param.Name(), param.Type())
+			//}
+			results := sig.Results()
+			//log.Println(results.Len())
+			resultTypes := ""
+			delim := ""
+			for k := 0; k < results.Len(); k++ {
+				result := results.At(k)
+				//log.Println("name:", result.Name(), result.Type())
+				resultTypes += delim + result.Type().String()
+				delim = ", "
+			}
+			struct_.Methods = append(struct_.Methods, &Method{
+				Name:            method.Obj().Name(),
+				Type:            resultTypes,
+				PointerReceiver: true,
+			})
+		}
+		methodSet := types.NewMethodSet(t)
+		for i := 0; i < methodSet.Len(); i++ {
+			method := methodSet.At(i)
+			//log.Println(method.Obj().Name())
+			name := method.Obj().Name()
+			for x, method := range struct_.Methods {
+				if method.Name == name {
+					struct_.Methods[x].PointerReceiver = false
+				}
+			}
 		}
 	}
 	return

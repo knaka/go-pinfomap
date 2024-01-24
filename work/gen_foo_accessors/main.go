@@ -11,7 +11,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = pkginfomapper.GenerateForStruct(pkginfomapper.AccessorsTemplate, structInfo)
+	err = pkginfomapper.Generate(pkginfomapper.AccessorsTemplate, structInfo)
 	if err != nil {
 		panic(err)
 	}

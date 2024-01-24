@@ -222,14 +222,14 @@ func GetStructInfo(packageName string, structName string, data any) (struct_ *St
 	return
 }
 
-func GenerateForStruct(tmpl string, info *Struct) (err error) {
+func Generate(tmpl string, data any) (err error) {
 	outPath := filepath.Join(getOutputDir(), getOutputBasename())
 	if err != nil {
 		return
 	}
 	tmplParsed := template.Must(template.New("aaa").Parse(tmpl))
 	buf := new(bytes.Buffer)
-	err = tmplParsed.Execute(buf, info)
+	err = tmplParsed.Execute(buf, data)
 	if err != nil {
 		return
 	}
@@ -237,7 +237,7 @@ func GenerateForStruct(tmpl string, info *Struct) (err error) {
 	if err != nil {
 		return
 	}
-	sourceFile := goimports.NewSourceFile(info.PackagePath, outPath)
+	sourceFile := goimports.NewSourceFile( /* data.PackagePath */ "?", outPath)
 	_ = goimports.WithRemovingUnusedImports(sourceFile)
 	fixed, _, differs, err := sourceFile.Fix()
 	if err != nil {

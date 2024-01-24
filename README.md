@@ -26,7 +26,7 @@ type Foo struct {
 }
 ```
 
-`./gen_foo_accessors_go/main.go` is a accessors generator for the struct:
+`./gen_foo_accessors_go/main.go` is a accessors generator for the struct.):
 
 ```go
 package main
@@ -80,6 +80,8 @@ func (rcv *Foo) SetQuux(value reviser.SourceDir) {
 	rcv.quux = value
 }
 ```
+
+`go run ./gen_foo_accessors.go` also works if you prefer to place the generator code in the same directory as `./foo.go`.
 
 While the above example is using a template `AccessorsTemplate`, you can use your own template by passing it to `pkginfomapper.Generate`. `AccessorsTemplate` is defined as follows:
 

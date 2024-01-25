@@ -8,7 +8,7 @@ package {{$.PackageName}}
 import (
 {{range $.Imports}}
 	"{{.}}"
-{{end}}
+{{end}}{{/* range */}}
 )
 
 {{range $.PrivateFields}}

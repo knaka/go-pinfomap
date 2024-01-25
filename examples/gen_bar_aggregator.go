@@ -1,7 +1,7 @@
-// //go:build ignore
-// // +build ignore
+//go:build ignore
+// +build ignore
 
-package main
+package examples
 
 import (
 	"github.com/knaka/pinfomap"

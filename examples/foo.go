@@ -1,4 +1,4 @@
-package main
+package examples
 
 import (
 	goimports "github.com/incu6us/goimports-reviser/v3/reviser"

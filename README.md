@@ -24,14 +24,6 @@ type Foo struct {
 	qux  template.Template   `accessor:"getter,setter=false"`
 	quux goimports.SourceDir `accessor:"setter"`
 }
-
-func (rcv *Foo) Greet() string {
-	return "Hello"
-}
-
-func (rcv Foo) Greet2() string {
-	return "World"
-}
 ```
 
 `./gen_foo_accessor/main.go` serves as an accessor generator for the struct. You can place the generator comment `//go:generate go run ./gen_foo_accessor/` in the same directory as `./foo.go`:

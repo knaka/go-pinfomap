@@ -6,10 +6,10 @@ import (
 )
 
 type Foo struct {
-	bar  string `pkginfomapper:"setter,getter=true"`
+	bar  string `accessor:"setter,getter=true"`
 	Baz  int
-	qux  template.Template   `pkginfomapper:"getter,setter=false"`
-	quux goimports.SourceDir `pkginfomapper:"setter"`
+	qux  template.Template   `accessor:"getter,setter=false"`
+	quux goimports.SourceDir `accessor:"setter"`
 }
 
 func (rcv *Foo) Greet() string {

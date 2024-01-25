@@ -1,4 +1,4 @@
-module github.com/knaka/pkginfomapper
+module github.com/knaka/pinfomap
 
 go 1.20
 

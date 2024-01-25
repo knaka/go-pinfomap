@@ -1,4 +1,4 @@
-package pkginfomapper
+package pinfomap
 
 import (
 	"bytes"
@@ -106,13 +106,22 @@ func (s *Struct) PrivateFields() []*Field {
 	return privateFields
 }
 
-func GetStructInfo(packageName string, structName string, data any) (struct_ *Struct, err error) {
+type GetStructInfoParams struct {
+	// Tag names to parse
+	Tags []string
+	Data any
+}
+
+func GetStructInfo(packageName string, structName string, params *GetStructInfoParams) (struct_ *Struct, err error) {
 	if callerFilename == "" {
 		_, filename, _, ok := runtime.Caller(1)
 		if !ok {
 			panic("runtime.Caller() failed")
 		}
 		callerFilename = filename
+	}
+	if params == nil {
+		params = &GetStructInfoParams{}
 	}
 	cfg := &packages.Config{
 		Mode:  packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax,
@@ -132,7 +141,7 @@ func GetStructInfo(packageName string, structName string, data any) (struct_ *St
 		// Correct?
 		PackagePath:   pkg.PkgPath,
 		GeneratorName: getGeneratorName(),
-		Data:          data,
+		Data:          params.Data,
 	}
 	for _, name := range pkg.Types.Scope().Names() {
 		t := pkg.Types.Scope().Lookup(name).Type()
@@ -147,32 +156,33 @@ func GetStructInfo(packageName string, structName string, data any) (struct_ *St
 			field := st.Field(i)
 			fieldName := field.Name()
 			type_ := field.Type()
-			tag := st.Tag(i)
+			structTag := st.Tag(i)
 			fieldX := &Field{
 				Name: fieldName,
 				Type: types.TypeString(type_, func(p *types.Package) string {
 					struct_.Imports = append(struct_.Imports, p.Path())
 					return p.Name()
 				}),
-				Tag: tag,
+				Tag:    structTag,
+				Params: map[string]string{},
 			}
 			struct_.Fields = append(struct_.Fields, fieldX)
-			tagStr, ok := reflect.StructTag(tag).Lookup("pkginfomapper")
-			if !ok {
-				continue
-			}
-			Params := make(map[string]string)
-			for _, ParamsStr := range strings.Split(tagStr, ",") {
-				ParamsParts := strings.Split(ParamsStr, "=")
-				if len(ParamsParts) == 1 {
-					Params[ParamsParts[0]] = "true"
-				} else if len(ParamsParts) == 2 {
-					Params[ParamsParts[0]] = ParamsParts[1]
-				} else {
-					panic("Invalid tag info")
+			for _, tag := range params.Tags {
+				tagStr, ok := reflect.StructTag(structTag).Lookup(tag)
+				if !ok {
+					continue
+				}
+				for _, ParamsStr := range strings.Split(tagStr, ",") {
+					ParamsParts := strings.Split(ParamsStr, "=")
+					if len(ParamsParts) == 1 {
+						fieldX.Params[ParamsParts[0]] = "true"
+					} else if len(ParamsParts) == 2 {
+						fieldX.Params[ParamsParts[0]] = ParamsParts[1]
+					} else {
+						panic("Invalid tag info")
+					}
 				}
 			}
-			fieldX.Params = Params
 		}
 		methodSet2 := types.NewMethodSet(types.NewPointer(t))
 		for i := 0; i < methodSet2.Len(); i++ {

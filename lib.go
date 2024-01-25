@@ -113,7 +113,13 @@ type GetStructInfoParams struct {
 	Data any
 }
 
-func GetStructInfo(packageName string, structName string, params *GetStructInfoParams) (struct_ *Struct, err error) {
+func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Struct, err error) {
+	type_ := reflect.TypeOf(structObject)
+	if type_.Kind() != reflect.Struct {
+		panic("Not a struct")
+	}
+	packagePath := type_.PkgPath()
+	structName := type_.Name()
 	if callerFilename == "" {
 		_, filename, _, ok := runtime.Caller(1)
 		if !ok {
@@ -128,10 +134,7 @@ func GetStructInfo(packageName string, structName string, params *GetStructInfoP
 		Mode:  packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax,
 		Tests: false,
 	}
-	if strings.HasPrefix(packageName, ".") {
-		packageName = filepath.Join(getOutputDir(), packageName)
-	}
-	packages_, err := packages.Load(cfg, packageName)
+	packages_, err := packages.Load(cfg, packagePath)
 	if err != nil {
 		return
 	}

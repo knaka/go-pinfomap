@@ -12,13 +12,13 @@ import (
 )
 
 {{range $.PrivateFields}}
-{{if eq .Params.getter "true"}}
+{{if .Params.getter }}
 func (rcv *{{$.StructName}}) Get{{.CapName}}() {{.Type}} {
 	return rcv.{{.Name}}
 }
 {{end}}{{/* if */}}
 
-{{if eq .Params.setter "true"}}
+{{if .Params.setter }}
 func (rcv *{{$.StructName}}) Set{{.CapName}}(value {{.Type}}) {
 	rcv.{{.Name}} = value
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -72,7 +73,7 @@ type Field struct {
 	Name   string
 	Type   string
 	Tag    string
-	Params map[string]string
+	Params map[string]any
 }
 
 func (f *Field) CapName() string {
@@ -164,7 +165,7 @@ func GetStructInfo(packageName string, structName string, params *GetStructInfoP
 					return p.Name()
 				}),
 				Tag:    structTag,
-				Params: map[string]string{},
+				Params: map[string]any{},
 			}
 			struct_.Fields = append(struct_.Fields, fieldX)
 			for _, tag := range params.Tags {
@@ -175,9 +176,22 @@ func GetStructInfo(packageName string, structName string, params *GetStructInfoP
 				for _, ParamsStr := range strings.Split(tagStr, ",") {
 					ParamsParts := strings.Split(ParamsStr, "=")
 					if len(ParamsParts) == 1 {
-						fieldX.Params[ParamsParts[0]] = "true"
+						fieldX.Params[ParamsParts[0]] = true
 					} else if len(ParamsParts) == 2 {
-						fieldX.Params[ParamsParts[0]] = ParamsParts[1]
+						value := ParamsParts[1]
+						var value_ any
+						if value == "true" {
+							value_ = true
+						} else if value == "false" {
+							value_ = false
+						} else if n, err := strconv.Atoi(value); err == nil {
+							value_ = n
+						} else if n, err := strconv.ParseFloat(value, 64); err == nil {
+							value_ = n
+						} else {
+							value_ = value
+						}
+						fieldX.Params[ParamsParts[0]] = value_
 					} else {
 						panic("Invalid tag info")
 					}

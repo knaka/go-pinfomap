@@ -116,4 +116,4 @@ func (rcv *{{$.StructName}}) Set{{.CapName}}(value {{.Type}}) {
 {{end}}{{/* range */}}
 ```
 
-The resulting Go code is automatically formatted with “goimports-reviser”, allowing you to write the template without worrying about the strictness of import statements or unnecessary empty lines.
+The resulting Go code is automatically formatted with [goimports-reviser](https://github.com/incu6us/goimports-reviser), allowing you to write the template without worrying about the strictness of import statements or unnecessary empty lines.

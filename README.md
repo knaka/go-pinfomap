@@ -51,7 +51,7 @@ func main() {
 
 	// Alternatively, specify the package and the struct by name to extract its information.
 	// This method might be useful when the struct is not directly accessible or if you want to reference it dynamically.
-	// structInfo, err := pinfomap.GetStructInfoByName(".", "Foo", ...)
+	//structInfo, err := pinfomap.GetStructInfoByName(".", "Foo", ...)
 
 	if err != nil {
 		panic(err)

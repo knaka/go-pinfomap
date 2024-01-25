@@ -160,6 +160,10 @@ func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Stru
 			field := st.Field(i)
 			fieldName := field.Name()
 			type_ := field.Type()
+			//isPointer := (func() bool {
+			//	_, ok := type_.(*types.Pointer)
+			//	return ok
+			//})()
 			structTag := st.Tag(i)
 			fieldX := &Field{
 				Name: fieldName,

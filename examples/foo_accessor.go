@@ -20,6 +20,6 @@ func (rcv *Foo) GetQux() template.Template {
 	return rcv.qux
 }
 
-func (rcv *Foo) SetQuux(value reviser.SourceDir) {
+func (rcv *Foo) SetQuux(value *reviser.SourceDir) {
 	rcv.quux = value
 }

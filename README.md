@@ -8,7 +8,7 @@ Generates Go code from a template by referencing package information such as pac
 
 ### Accessor Generation
 
-`./foo.go` contains the struct `Foo`:
+`./foo.go` contains the sample struct `Foo`:
 
 ```go
 package examples

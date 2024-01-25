@@ -1,3 +1,3 @@
 package main
 
-//go:generate go run ./gen_foo_accessors/
+//go:generate go run ./gen_foo_accessor/

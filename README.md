@@ -34,7 +34,7 @@ func (rcv Foo) Greet2() string {
 }
 ```
 
-`./gen_foo_accessors_go/main.go` serves as an accessor generator for the struct:
+`./gen_foo_accessors_go/main.go` serves as an accessor generator for the struct. You can place the generator comment `//go:generate go run ./gen_foo_accessors/` in the same directory as `./foo.go`:
 
 ```go
 package main

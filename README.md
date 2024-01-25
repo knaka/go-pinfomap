@@ -21,8 +21,8 @@ import (
 type Foo struct {
 	bar  string `accessor:"setter,getter=true"`
 	Baz  int
-	qux  template.Template   `accessor:"getter,setter=false"`
-	quux goimports.SourceDir `accessor:"setter"`
+	qux  template.Template    `accessor:"getter,setter=false"`
+	quux *goimports.SourceDir `accessor:"setter"`
 }
 ```
 
@@ -81,7 +81,7 @@ func (rcv *Foo) GetQux() template.Template {
 	return rcv.qux
 }
 
-func (rcv *Foo) SetQuux(value reviser.SourceDir) {
+func (rcv *Foo) SetQuux(value *reviser.SourceDir) {
 	rcv.quux = value
 }
 ```

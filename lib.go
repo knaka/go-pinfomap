@@ -113,20 +113,30 @@ type GetStructInfoParams struct {
 	Data any
 }
 
+func initCallerFileName() {
+	if callerFilename != "" {
+		return
+	}
+	_, filename, _, ok := runtime.Caller(2)
+	if !ok {
+		panic("runtime.Caller() failed")
+	}
+	callerFilename = filename
+}
+
 func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Struct, err error) {
+	initCallerFileName()
 	type_ := reflect.TypeOf(structObject)
 	if type_.Kind() != reflect.Struct {
 		panic("Not a struct")
 	}
 	packagePath := type_.PkgPath()
 	structName := type_.Name()
-	if callerFilename == "" {
-		_, filename, _, ok := runtime.Caller(1)
-		if !ok {
-			panic("runtime.Caller() failed")
-		}
-		callerFilename = filename
-	}
+	return GetStructInfoByName(packagePath, structName, params)
+}
+
+func GetStructInfoByName(packagePath string, structName string, params *GetStructInfoParams) (struct_ *Struct, err error) {
+	initCallerFileName()
 	if params == nil {
 		params = &GetStructInfoParams{}
 	}

@@ -263,7 +263,14 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 	return
 }
 
-func Generate(tmpl string, data any) (err error) {
+type GenerateParams struct {
+	DisableGoimports bool
+}
+
+func Generate(tmpl string, data any, params *GenerateParams) (err error) {
+	if params == nil {
+		params = &GenerateParams{}
+	}
 	outPath := filepath.Join(getOutputDir(), getOutputBasename())
 	if err != nil {
 		return
@@ -278,16 +285,18 @@ func Generate(tmpl string, data any) (err error) {
 	if err != nil {
 		return
 	}
-	sourceFile := goimports.NewSourceFile( /* data.PackagePath */ "?", outPath)
-	_ = goimports.WithRemovingUnusedImports(sourceFile)
-	fixed, _, differs, err := sourceFile.Fix()
-	if err != nil {
-		return
-	}
-	if differs {
-		err = os.WriteFile(outPath, fixed, 0644)
+	if !params.DisableGoimports {
+		sourceFile := goimports.NewSourceFile( /* data.PackagePath */ "?", outPath)
+		_ = goimports.WithRemovingUnusedImports(sourceFile)
+		fixed, _, differs, err := sourceFile.Fix()
 		if err != nil {
-			return
+			return err
+		}
+		if differs {
+			err = os.WriteFile(outPath, fixed, 0644)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return

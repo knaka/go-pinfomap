@@ -11,10 +11,6 @@ func main() {
 		&pinfomap.GetStructInfoParams{
 			// Tags to consider when extracting information. In this case, it looks for "accessor" tag.
 			Tags: []string{"accessor"},
-			// Additional data that can be passed to the template.
-			Data: map[string]any{
-				"AdditionalComment": "This is a comment.",
-			},
 		},
 	)
 
@@ -25,7 +21,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	err = pinfomap.Generate(pinfomap.AccessorTemplate, structInfo)
+
+	// Additional data that can be passed to the template.
+	structInfo.Data = map[string]any{
+		"AdditionalComment": "This is a comment.",
+	}
+
+	err = pinfomap.Generate(pinfomap.AccessorTemplate, structInfo, nil)
 	if err != nil {
 		panic(err)
 	}

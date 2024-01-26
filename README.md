@@ -10,6 +10,24 @@ Generates Go code from a template by referencing package information such as pac
 
 `./foo.go` contains the sample struct `Foo`:
 
+<!-- mdppcode src=examples/foo.go -->
+    package examples
+    
+    import (
+    	goimports "github.com/incu6us/goimports-reviser/v3/reviser"
+    	"text/template"
+    )
+    
+    type Foo struct {
+    	bar  string `accessor:"setter,getter=true"`
+    	Baz  int
+    	qux  template.Template    `accessor:"getter,setter=false"`
+    	quux *goimports.SourceDir `accessor:"setter"`
+    }
+<!-- /mdppcode -->
+
+`./gen_foo_accessor/main.go` serves as an accessor generator for the struct. You can place the generator comment `//go:generate go run ./gen_foo_accessor/` in the same directory as `./foo.go`:
+
 ```go
 package examples
 
@@ -24,42 +42,13 @@ type Foo struct {
 	qux  template.Template    `accessor:"getter,setter=false"`
 	quux *goimports.SourceDir `accessor:"setter"`
 }
-```
 
-`./gen_foo_accessor/main.go` serves as an accessor generator for the struct. You can place the generator comment `//go:generate go run ./gen_foo_accessor/` in the same directory as `./foo.go`:
+func (rcv *Foo) Greet() string {
+	return "Hello"
+}
 
-```go
-package main
-
-import (
-	"github.com/knaka/pinfomap"
-	"github.com/knaka/pinfomap/examples"
-)
-
-func main() {
-	// GetStructInfo extracts information about the struct of the object passed as an argument.
-	structInfo, err := pinfomap.GetStructInfo(examples.Foo{},
-		&pinfomap.GetStructInfoParams{
-			// Tags to consider when extracting information. In this case, it looks for "accessor" tag.
-			Tags: []string{"accessor"},
-			// Additional data that can be passed to the template.
-			Data: map[string]any{
-				"AdditionalComment": "This is a comment.",
-			},
-		},
-	)
-
-	// Alternatively, specify the package and the struct by name to extract its information.
-	// This method might be useful when the struct is not directly accessible or if you want to reference it dynamically.
-	//structInfo, err := pinfomap.GetStructInfoByName(".", "Foo", ...)
-
-	if err != nil {
-		panic(err)
-	}
-	err = pinfomap.Generate(pinfomap.AccessorTemplate, structInfo)
-	if err != nil {
-		panic(err)
-	}
+func (rcv Foo) Greet2() string {
+	return "World"
 }
 ```
 

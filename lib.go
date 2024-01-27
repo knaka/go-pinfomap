@@ -5,6 +5,7 @@ import (
 	goimports "github.com/incu6us/goimports-reviser/v3/reviser"
 	"go/types"
 	"golang.org/x/tools/go/packages"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -120,6 +121,7 @@ type Method struct {
 type Package struct {
 	Name string
 	Path string
+	Pkg  *packages.Package
 }
 
 type Struct struct {
@@ -132,6 +134,18 @@ type Struct struct {
 	Methods       []*Method
 	Imports       []string
 	Data          any
+}
+
+func (p *Package) Names() []string {
+	ret := []string{}
+	for _, name := range p.Pkg.Types.Scope().Names() {
+		ret = append(ret, name)
+		t := p.Pkg.Types.Scope().Lookup(name).Type()
+		u := t.String()
+		log.Println(t, u)
+		// Underlying type が types.Basic で、その BasicKind が `String` なものを列挙したい？ あるいは、もっと汎用的なメソッドの方が使いやすいか
+	}
+	return ret
 }
 
 func (s *Struct) PrivateFields() []*Field {
@@ -209,11 +223,12 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 		Package: &Package{
 			Name: pkg.Name,
 			Path: pkg.PkgPath,
+			Pkg:  pkg,
 		},
 		// Correct?
-		PackagePath:   pkg.PkgPath,
-		GeneratorName: getGeneratorName(),
-		Data:          params.Data,
+		PackagePath: pkg.PkgPath,
+		//GeneratorName: getGeneratorName(),
+		Data: params.Data,
 	}
 	for _, name := range pkg.Types.Scope().Names() {
 		t := pkg.Types.Scope().Lookup(name).Type()

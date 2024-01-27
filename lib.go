@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 )
 
@@ -67,7 +68,7 @@ func getOutputBasename() string {
 	name := getGeneratorName()
 	name = strings.TrimPrefix(name, "gen_")
 	name = strings.TrimSuffix(name, ".go")
-	name = reExt.ReplaceAllString(name, ".$1")
+	name = reExt.ReplaceAllString(name, ".${1}")
 	return name
 }
 
@@ -76,10 +77,37 @@ type Field struct {
 	Type   string
 	Tag    string
 	Params map[string]any
+	Data   any
 }
 
 func (f *Field) CapName() string {
 	return strings.ToUpper(f.Name[0:1]) + f.Name[1:]
+}
+
+var vars1 struct {
+	reId   *regexp.Regexp
+	reEach *regexp.Regexp
+	once   sync.Once
+}
+
+func Camel2Snake(sIn string) (sOut string) {
+	vars1.once.Do(func() {
+		// Does not support look ahead/behind
+		vars1.reId = regexp.MustCompile(`(^|[a-z0-9])ID($|[A-Z])`)
+		vars1.reEach = regexp.MustCompile(`([A-Z][a-z0-9]*)`)
+	})
+	sOut = sIn
+	sOut = vars1.reId.ReplaceAllString(sOut, "${1}Id${2}")
+	sOut = vars1.reEach.ReplaceAllStringFunc(sOut, func(s string) string {
+		return "_" + strings.ToLower(s)
+	})
+	sOut = strings.TrimPrefix(sOut, "_")
+	return sOut
+}
+
+// SnakeCaseName converts a field name to snake case.
+func (f *Field) SnakeCaseName() string {
+	return Camel2Snake(f.Name)
 }
 
 type Method struct {

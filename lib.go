@@ -18,14 +18,6 @@ import (
 
 var callerFilename string
 
-func Init() {
-	_, filename, _, ok := runtime.Caller(1)
-	if !ok {
-		panic("runtime.Caller() failed")
-	}
-	callerFilename = filename
-}
-
 func getGeneratorSourceFile() string {
 	return callerFilename
 }
@@ -62,13 +54,20 @@ func getGeneratorName() string {
 	return name
 }
 
-var reExt = regexp.MustCompile(`_([[:alnum:]]+)$`)
+// Lazily initialized variables
+var v2 struct {
+	reExt *regexp.Regexp
+	once  sync.Once
+}
 
 func getOutputBasename() string {
+	v2.once.Do(func() {
+		v2.reExt = regexp.MustCompile(`_([[:alnum:]]+)$`)
+	})
 	name := getGeneratorName()
 	name = strings.TrimPrefix(name, "gen_")
 	name = strings.TrimSuffix(name, ".go")
-	name = reExt.ReplaceAllString(name, ".${1}")
+	name = v2.reExt.ReplaceAllString(name, ".${1}")
 	return name
 }
 
@@ -84,25 +83,27 @@ func (f *Field) CapName() string {
 	return strings.ToUpper(f.Name[0:1]) + f.Name[1:]
 }
 
-var vars1 struct {
+// Lazily initialized variables
+var v1 struct {
 	reId   *regexp.Regexp
 	reEach *regexp.Regexp
 	once   sync.Once
 }
 
-func Camel2Snake(sIn string) (sOut string) {
-	vars1.once.Do(func() {
+// Camel2Snake converts a camel case string to snake case.
+func Camel2Snake(sIn string) (s string) {
+	v1.once.Do(func() {
 		// Does not support look ahead/behind
-		vars1.reId = regexp.MustCompile(`(^|[a-z0-9])ID($|[A-Z])`)
-		vars1.reEach = regexp.MustCompile(`([A-Z][a-z0-9]*)`)
+		v1.reId = regexp.MustCompile(`(^|[a-z0-9])ID($|[A-Z])`)
+		v1.reEach = regexp.MustCompile(`([A-Z][a-z0-9]*)`)
 	})
-	sOut = sIn
-	sOut = vars1.reId.ReplaceAllString(sOut, "${1}Id${2}")
-	sOut = vars1.reEach.ReplaceAllStringFunc(sOut, func(s string) string {
+	s = sIn
+	s = v1.reId.ReplaceAllString(s, "${1}Id${2}")
+	s = v1.reEach.ReplaceAllStringFunc(s, func(s string) string {
 		return "_" + strings.ToLower(s)
 	})
-	sOut = strings.TrimPrefix(sOut, "_")
-	return sOut
+	s = strings.TrimPrefix(s, "_")
+	return s
 }
 
 // SnakeCaseName converts a field name to snake case.
@@ -116,9 +117,15 @@ type Method struct {
 	PointerReceiver bool
 }
 
+type Package struct {
+	Name string
+	Path string
+}
+
 type Struct struct {
 	StructName    string
 	PackageName   string
+	Package       *Package
 	PackagePath   string
 	GeneratorName string
 	Fields        []*Field
@@ -140,6 +147,7 @@ func (s *Struct) PrivateFields() []*Field {
 type GetStructInfoParams struct {
 	// Tag names to parse
 	Tags []string
+	// Additional data to pass to the template
 	Data any
 }
 
@@ -154,8 +162,26 @@ func initCallerFileName() {
 	callerFilename = filename
 }
 
+func (p *Package) GetTypes() []string {
+	ret := []string{}
+	cfg := &packages.Config{
+		Mode:  packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax,
+		Tests: false,
+	}
+	packages_, err := packages.Load(cfg, p.Path)
+	if err != nil {
+		panic(err)
+	}
+	pkg := packages_[0]
+	for _, name := range pkg.Types.Scope().Names() {
+		t := pkg.Types.Scope().Lookup(name).Type()
+		// todo: filter
+		ret = append(ret, t.String())
+	}
+	return ret
+}
+
 func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Struct, err error) {
-	initCallerFileName()
 	type_ := reflect.TypeOf(structObject)
 	if type_.Kind() != reflect.Struct {
 		panic("Not a struct")
@@ -166,7 +192,6 @@ func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Stru
 }
 
 func GetStructInfoByName(packagePath string, structName string, params *GetStructInfoParams) (struct_ *Struct, err error) {
-	initCallerFileName()
 	if params == nil {
 		params = &GetStructInfoParams{}
 	}
@@ -180,8 +205,11 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 	}
 	pkg := packages_[0]
 	struct_ = &Struct{
-		StructName:  structName,
-		PackageName: pkg.Name,
+		StructName: structName,
+		Package: &Package{
+			Name: pkg.Name,
+			Path: pkg.PkgPath,
+		},
 		// Correct?
 		PackagePath:   pkg.PkgPath,
 		GeneratorName: getGeneratorName(),
@@ -298,6 +326,7 @@ type GenerateParams struct {
 }
 
 func Generate(tmpl string, data any, params *GenerateParams) (err error) {
+	initCallerFileName()
 	if params == nil {
 		params = &GenerateParams{}
 	}

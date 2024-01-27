@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -60,12 +61,13 @@ func getGeneratorName() string {
 	return name
 }
 
+var reExt = regexp.MustCompile(`_([[:alnum:]]+)$`)
+
 func getOutputBasename() string {
 	name := getGeneratorName()
 	name = strings.TrimPrefix(name, "gen_")
-	name = strings.TrimSuffix(name, "_go")
 	name = strings.TrimSuffix(name, ".go")
-	name = name + ".go"
+	name = reExt.ReplaceAllString(name, ".$1")
 	return name
 }
 

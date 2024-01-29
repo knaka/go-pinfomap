@@ -2,6 +2,7 @@ package pinfomap
 
 import (
 	"bytes"
+	"github.com/gertd/go-pluralize"
 	goimports "github.com/incu6us/goimports-reviser/v3/reviser"
 	"go/types"
 	"golang.org/x/tools/go/packages"
@@ -26,7 +27,8 @@ func getGeneratorSourceDir() string {
 	return filepath.Dir(getGeneratorSourceFile())
 }
 
-func getOutputDir() string {
+func OutputDir() string {
+	initLib()
 	generatorSourceDir := getGeneratorSourceDir()
 	if strings.HasPrefix(filepath.Base(generatorSourceDir), "gen_") {
 		return filepath.Dir(generatorSourceDir)
@@ -48,7 +50,7 @@ func getGeneratorName() string {
 		if strings.HasPrefix(filepath.Base(generatorSourceFile), "gen_") {
 			name = filepath.Base(generatorSourceFile)
 		} else {
-			panic("Cannot infer output basename")
+			name = "Cannot infer output basename"
 		}
 	}
 	return name
@@ -106,8 +108,8 @@ func Camel2Snake(sIn string) (s string) {
 	return s
 }
 
-// SnakeCaseName converts a field name to snake case.
-func (f *Field) SnakeCaseName() string {
+// SnakeName converts a field name to snake case.
+func (f *Field) SnakeName() string {
 	return Camel2Snake(f.Name)
 }
 
@@ -178,7 +180,11 @@ type GetStructInfoParams struct {
 	Data any
 }
 
-func initCallerFileName() {
+func Init() {
+	initLib()
+}
+
+func initLib() {
 	if callerFilename != "" {
 		return
 	}
@@ -190,6 +196,7 @@ func initCallerFileName() {
 }
 
 func (p *Package) GetTypes() []string {
+	initLib()
 	var ret []string
 	cfg := &packages.Config{
 		Mode:  packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax,
@@ -209,6 +216,7 @@ func (p *Package) GetTypes() []string {
 }
 
 func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Struct, err error) {
+	initLib()
 	type_ := reflect.TypeOf(structObject)
 	if type_.Kind() != reflect.Struct {
 		panic("Not a struct")
@@ -219,6 +227,7 @@ func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Stru
 }
 
 func GetStructInfoByName(packagePath string, structName string, params *GetStructInfoParams) (struct_ *Struct, err error) {
+	initLib()
 	if params == nil {
 		params = &GetStructInfoParams{}
 	}
@@ -239,9 +248,9 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 			Pkg:  pkg,
 		},
 		// Correct?
-		PackagePath: pkg.PkgPath,
-		//GeneratorName: getGeneratorName(),
-		Data: params.Data,
+		PackagePath:   pkg.PkgPath,
+		GeneratorName: getGeneratorName(),
+		Data:          params.Data,
 	}
 	for _, name := range pkg.Types.Scope().Names() {
 		t := pkg.Types.Scope().Lookup(name).Type()
@@ -356,7 +365,7 @@ type GenerateParams struct {
 
 //goland:noinspection GoUnusedExportedFunction, GoUnnecessarilyExportedIdentifiers
 func GenerateGo(tmpl string, data any, params *GenerateParams) (err error) {
-	initCallerFileName()
+	initLib()
 	if params == nil {
 		params = &GenerateParams{}
 	}
@@ -365,11 +374,14 @@ func GenerateGo(tmpl string, data any, params *GenerateParams) (err error) {
 }
 
 func Generate(tmpl string, data any, params *GenerateParams) (err error) {
-	initCallerFileName()
+	initLib()
 	if params == nil {
 		params = &GenerateParams{}
 	}
-	outPath := filepath.Join(getOutputDir(), getOutputBasename())
+	outPath := filepath.Join(OutputDir(), getOutputBasename())
+	if params.Filename != "" {
+		outPath = params.Filename
+	}
 	if err != nil {
 		return
 	}
@@ -398,4 +410,27 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 		}
 	}
 	return
+}
+
+var v3 struct {
+	client *pluralize.Client
+	once   sync.Once
+}
+
+func Plural(s string) string {
+	v3.once.Do(func() {
+		v3.client = pluralize.NewClient()
+	})
+	return v3.client.Plural(s)
+}
+
+func Singular(s string) string {
+	v3.once.Do(func() {
+		v3.client = pluralize.NewClient()
+	})
+	return v3.client.Singular(s)
+}
+
+func GetOutputPath(elem ...string) string {
+	return filepath.Join(OutputDir(), filepath.Join(elem...))
 }

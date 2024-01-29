@@ -5,7 +5,6 @@ import (
 	goimports "github.com/incu6us/goimports-reviser/v3/reviser"
 	"go/types"
 	"golang.org/x/tools/go/packages"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -136,14 +135,24 @@ type Struct struct {
 	Data          any
 }
 
-func (p *Package) Names() []string {
+func (p *Package) GetStringTypes() []string {
 	ret := []string{}
 	for _, name := range p.Pkg.Types.Scope().Names() {
-		ret = append(ret, name)
-		t := p.Pkg.Types.Scope().Lookup(name).Type()
-		u := t.String()
-		log.Println(t, u)
+		//ret = append(ret, name)
+		x := p.Pkg.Types.Scope().Lookup(name)
+		t := x.Type()
+		//u := t.String()
+		//log.Println(t, u)
 		// Underlying type が types.Basic で、その BasicKind が `String` なものを列挙したい？ あるいは、もっと汎用的なメソッドの方が使いやすいか
+		tu, ok := t.Underlying().(*types.Basic)
+		if !ok {
+			continue
+		}
+		// `type ... string` の型以外を排除
+		if tu.Kind() != types.String {
+			continue
+		}
+		ret = append(ret, name)
 	}
 	return ret
 }

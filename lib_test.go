@@ -2,8 +2,8 @@ package pinfomap
 
 import (
 	"app/db/sqlcgen"
+	"github.com/knaka/go-pinfomap/examples"
 	. "github.com/knaka/go-utils"
-	"github.com/knaka/pinfomap/examples"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
@@ -13,7 +13,7 @@ func TestGetStructInfo(t *testing.T) {
 	structInfo := Ensure(GetStructInfo(examples.Foo{}, &GetStructInfoParams{}))
 	assert.Equal(t, structInfo.StructName, "Foo")
 	assert.Equal(t, structInfo.Package.Name, "examples")
-	assert.Equal(t, structInfo.Package.Path, "github.com/knaka/pinfomap/examples")
+	assert.Equal(t, structInfo.Package.Path, "github.com/knaka/go-pinfomap/examples")
 }
 
 func TestGetStructInfo2(t *testing.T) {

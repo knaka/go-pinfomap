@@ -4,7 +4,7 @@
 package examples
 
 import (
-	"github.com/knaka/pinfomap"
+	"github.com/knaka/go-pinfomap"
 )
 
 func main() {

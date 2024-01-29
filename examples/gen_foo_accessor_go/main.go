@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/knaka/pinfomap"
-	"github.com/knaka/pinfomap/examples"
+	"github.com/knaka/go-pinfomap"
+	"github.com/knaka/go-pinfomap/examples"
 )
 
 func main() {

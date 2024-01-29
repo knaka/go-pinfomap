@@ -135,8 +135,12 @@ type Struct struct {
 	Data          any
 }
 
+func (s *Struct) SnakeStructName() string {
+	return Camel2Snake(s.StructName)
+}
+
 func (p *Package) GetStringTypes() []string {
-	ret := []string{}
+	var ret []string
 	for _, name := range p.Pkg.Types.Scope().Names() {
 		//ret = append(ret, name)
 		x := p.Pkg.Types.Scope().Lookup(name)
@@ -186,7 +190,7 @@ func initCallerFileName() {
 }
 
 func (p *Package) GetTypes() []string {
-	ret := []string{}
+	var ret []string
 	cfg := &packages.Config{
 		Mode:  packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax,
 		Tests: false,
@@ -346,7 +350,18 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 }
 
 type GenerateParams struct {
-	DisableGoimports bool
+	ShouldRunGoImports bool
+	Filename           string
+}
+
+//goland:noinspection GoUnusedExportedFunction, GoUnnecessarilyExportedIdentifiers
+func GenerateGo(tmpl string, data any, params *GenerateParams) (err error) {
+	initCallerFileName()
+	if params == nil {
+		params = &GenerateParams{}
+	}
+	params.ShouldRunGoImports = true
+	return Generate(tmpl, data, params)
 }
 
 func Generate(tmpl string, data any, params *GenerateParams) (err error) {
@@ -368,7 +383,7 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 	if err != nil {
 		return
 	}
-	if !params.DisableGoimports {
+	if params.ShouldRunGoImports {
 		sourceFile := goimports.NewSourceFile( /* data.PackagePath */ "?", outPath)
 		_ = goimports.WithRemovingUnusedImports(sourceFile)
 		fixed, _, differs, err := sourceFile.Fix()

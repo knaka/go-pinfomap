@@ -2,7 +2,6 @@ package pinfomap
 
 import (
 	"bytes"
-	"github.com/gertd/go-pluralize"
 	goimports "github.com/incu6us/goimports-reviser/v3/reviser"
 	"go/types"
 	"golang.org/x/tools/go/packages"
@@ -137,6 +136,10 @@ type Struct struct {
 
 func (s *Struct) SnakeStructName() string {
 	return Camel2Snake(s.StructName)
+}
+
+func (s *Struct) PackageName() string {
+	return s.Package.Name
 }
 
 func (p *Package) GetStringTypes() []string {
@@ -399,6 +402,8 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 		_ = goimports.WithRemovingUnusedImports(sourceFile)
 		fixed, _, differs, err := sourceFile.Fix()
 		if err != nil {
+			// Rename the file not to be used as a source file.
+			_ = os.Rename(outPath, outPath+".err")
 			return err
 		}
 		if differs {
@@ -409,25 +414,6 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 		}
 	}
 	return
-}
-
-var v3 struct {
-	client *pluralize.Client
-	once   sync.Once
-}
-
-func Plural(s string) string {
-	v3.once.Do(func() {
-		v3.client = pluralize.NewClient()
-	})
-	return v3.client.Plural(s)
-}
-
-func Singular(s string) string {
-	v3.once.Do(func() {
-		v3.client = pluralize.NewClient()
-	})
-	return v3.client.Singular(s)
 }
 
 func GetOutputPath(elem ...string) string {

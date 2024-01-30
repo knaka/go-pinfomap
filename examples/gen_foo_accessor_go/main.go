@@ -28,7 +28,7 @@ func main() {
 		"AdditionalComment": "This is a comment.",
 	}
 
-	err = pinfomap.Generate(pinfomap.AccessorTemplate, structInfo, nil)
+	err = pinfomap.GenerateGo(pinfomap.AccessorTemplate, structInfo, nil)
 	if err != nil {
 		panic(err)
 	}

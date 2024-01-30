@@ -126,15 +126,13 @@ type Package struct {
 }
 
 type Struct struct {
-	StructName    string
-	PackageName   string
-	Package       *Package
-	PackagePath   string
-	GeneratorName string
-	Fields        []*Field
-	Methods       []*Method
-	Imports       []string
-	Data          any
+	StructName  string
+	Package     *Package
+	PackagePath string
+	Fields      []*Field
+	Methods     []*Method
+	Imports     []string
+	Data        any
 }
 
 func (s *Struct) SnakeStructName() string {
@@ -248,9 +246,8 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 			Pkg:  pkg,
 		},
 		// Correct?
-		PackagePath:   pkg.PkgPath,
-		GeneratorName: getGeneratorName(),
-		Data:          params.Data,
+		PackagePath: pkg.PkgPath,
+		Data:        params.Data,
 	}
 	for _, name := range pkg.Types.Scope().Names() {
 		t := pkg.Types.Scope().Lookup(name).Type()

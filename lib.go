@@ -91,6 +91,17 @@ var v1 struct {
 	once   sync.Once
 }
 
+func ForceCamel(sIn string) (s string) {
+	v1.once.Do(func() {
+		// Does not support look ahead/behind
+		v1.reId = regexp.MustCompile(`(^|[a-z0-9])ID($|[A-Z])`)
+		v1.reEach = regexp.MustCompile(`([A-Z][a-z0-9]*)`)
+	})
+	s = sIn
+	s = v1.reId.ReplaceAllString(s, "${1}Id${2}")
+	return s
+}
+
 // Camel2Snake converts a camel case string to snake case.
 func Camel2Snake(sIn string) (s string) {
 	v1.once.Do(func() {
@@ -110,6 +121,10 @@ func Camel2Snake(sIn string) (s string) {
 // SnakeName converts a field name to snake case.
 func (f *Field) SnakeName() string {
 	return Camel2Snake(f.Name)
+}
+
+func (f *Field) CamelName() string {
+	return ForceCamel(f.Name)
 }
 
 type Method struct {
@@ -398,8 +413,18 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 		return
 	}
 	if params.ShouldRunGoImports {
+		//cmd := exec.Command("go", "fmt", outPath)
+		//cmd.Stdout = os.Stdout
+		//cmd.Stderr = os.Stderr
+		//err = cmd.Run()
+		//if err != nil {
+		//	// Rename the file not to be used as a source file.
+		//	_ = os.Rename(outPath, outPath+".err")
+		//	return err
+		//}
 		sourceFile := goimports.NewSourceFile( /* data.PackagePath */ "?", outPath)
 		_ = goimports.WithRemovingUnusedImports(sourceFile)
+		_ = goimports.WithCodeFormatting(sourceFile)
 		fixed, _, differs, err := sourceFile.Fix()
 		if err != nil {
 			// Rename the file not to be used as a source file.

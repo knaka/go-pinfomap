@@ -385,7 +385,9 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 	if err != nil {
 		return
 	}
-	tmplParsed := template.Must(template.New("aaa").Parse(tmpl))
+	tmplParsed := template.Must(template.New("aaa").Funcs(map[string]any{
+		"GeneratorName": getGeneratorName,
+	}).Parse(tmpl))
 	buf := new(bytes.Buffer)
 	err = tmplParsed.Execute(buf, data)
 	if err != nil {

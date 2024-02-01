@@ -408,6 +408,14 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 	if err != nil {
 		return
 	}
+	outDir, err := filepath.Abs(filepath.Dir(outPath))
+	if err != nil {
+		return
+	}
+	err = os.MkdirAll(outDir, 0755)
+	if err != nil {
+		return
+	}
 	err = os.WriteFile(outPath, buf.Bytes(), 0644)
 	if err != nil {
 		return

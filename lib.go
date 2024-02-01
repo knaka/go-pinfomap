@@ -445,6 +445,7 @@ func Generate(tmpl string, data any, params *GenerateParams) (err error) {
 				return err
 			}
 		}
+		_ = os.Remove(outPath + ".err")
 	}
 	return
 }

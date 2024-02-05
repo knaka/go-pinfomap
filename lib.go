@@ -127,6 +127,12 @@ func (f *Field) CamelName() string {
 	return ForceCamel(f.Name)
 }
 
+func (f *Field) LowerCamelName() string {
+	s := ForceCamel(f.Name)
+	s = strings.ToLower(s[0:1]) + s[1:]
+	return s
+}
+
 type Method struct {
 	Name            string
 	Type            string

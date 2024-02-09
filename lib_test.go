@@ -10,14 +10,14 @@ import (
 )
 
 func TestGetStructInfo(t *testing.T) {
-	structInfo := Ensure(GetStructInfo(examples.Foo{}, &GetStructInfoParams{}))
+	structInfo := Ensure(NewStructInfo(examples.Foo{}, &ctorParams{}))
 	assert.Equal(t, structInfo.StructName, "Foo")
 	assert.Equal(t, structInfo.Package.Name, "examples")
 	assert.Equal(t, structInfo.Package.Path, "github.com/knaka/go-pinfomap/examples")
 }
 
 func TestGetStructInfo2(t *testing.T) {
-	structInfo := Ensure(GetStructInfo(sqlcgen.User{}, &GetStructInfoParams{}))
+	structInfo := Ensure(NewStructInfo(sqlcgen.User{}, &ctorParams{}))
 	assert.Equal(t, structInfo.StructName, "User")
 	assert.Equal(t, structInfo.Package.Name, "sqlcgen")
 	assert.Equal(t, structInfo.Package.Path, "app/db/sqlcgen")

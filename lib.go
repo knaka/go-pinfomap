@@ -1,76 +1,15 @@
 package pinfomap
 
 import (
-	"bytes"
-	goimports "github.com/incu6us/goimports-reviser/v3/reviser"
 	"go/types"
 	"golang.org/x/tools/go/packages"
-	"os"
-	"path/filepath"
+	"log"
 	"reflect"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"text/template"
 )
-
-var callerFilename string
-
-func getGeneratorSourceFile() string {
-	return callerFilename
-}
-
-func getGeneratorSourceDir() string {
-	return filepath.Dir(getGeneratorSourceFile())
-}
-
-func OutputDir() string {
-	initLib()
-	generatorSourceDir := getGeneratorSourceDir()
-	if strings.HasPrefix(filepath.Base(generatorSourceDir), "gen_") {
-		return filepath.Dir(generatorSourceDir)
-	}
-	generatorSourceFile := getGeneratorSourceFile()
-	if strings.HasPrefix(filepath.Base(generatorSourceFile), "gen_") {
-		return filepath.Dir(generatorSourceFile)
-	}
-	panic("Cannot infer output dir")
-}
-
-func getGeneratorName() string {
-	name := ""
-	generatorSourceDir := getGeneratorSourceDir()
-	if strings.HasPrefix(filepath.Base(generatorSourceDir), "gen_") {
-		name = filepath.Base(generatorSourceDir)
-	} else {
-		generatorSourceFile := getGeneratorSourceFile()
-		if strings.HasPrefix(filepath.Base(generatorSourceFile), "gen_") {
-			name = filepath.Base(generatorSourceFile)
-		} else {
-			name = "Cannot infer output basename"
-		}
-	}
-	return name
-}
-
-// Lazily initialized variables
-var v2 struct {
-	reExt *regexp.Regexp
-	once  sync.Once
-}
-
-func getOutputBasename() string {
-	v2.once.Do(func() {
-		v2.reExt = regexp.MustCompile(`_([[:alnum:]]+)$`)
-	})
-	name := getGeneratorName()
-	name = strings.TrimPrefix(name, "gen_")
-	name = strings.TrimSuffix(name, ".go")
-	name = v2.reExt.ReplaceAllString(name, ".${1}")
-	return name
-}
 
 type Field struct {
 	Name   string
@@ -195,30 +134,14 @@ func (s *Struct) PrivateFields() []*Field {
 	return privateFields
 }
 
-type GetStructInfoParams struct {
+type ctorParams struct {
 	// Tag names to parse
 	Tags []string
 	// Additional data to pass to the template
 	Data any
 }
 
-func Init() {
-	initLib()
-}
-
-func initLib() {
-	if callerFilename != "" {
-		return
-	}
-	_, filename, _, ok := runtime.Caller(2)
-	if !ok {
-		panic("runtime.Caller() failed")
-	}
-	callerFilename = filename
-}
-
 func (p *Package) GetTypes() []string {
-	initLib()
 	var ret []string
 	cfg := &packages.Config{
 		Mode:  packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax,
@@ -237,21 +160,49 @@ func (p *Package) GetTypes() []string {
 	return ret
 }
 
-func GetStructInfo(structObject any, params *GetStructInfoParams) (struct_ *Struct, err error) {
-	initLib()
-	type_ := reflect.TypeOf(structObject)
-	if type_.Kind() != reflect.Struct {
-		panic("Not a struct")
+type OptSetter func(*ctorParams)
+
+func WithTags(tags ...string) OptSetter {
+	return func(params *ctorParams) {
+		params.Tags = tags
 	}
-	packagePath := type_.PkgPath()
-	structName := type_.Name()
-	return GetStructInfoByName(packagePath, structName, params)
 }
 
-func GetStructInfoByName(packagePath string, structName string, params *GetStructInfoParams) (struct_ *Struct, err error) {
-	initLib()
-	if params == nil {
-		params = &GetStructInfoParams{}
+func WithData(data any) OptSetter {
+	return func(params *ctorParams) {
+		params.Data = data
+	}
+}
+
+func NewStructInfo(tgtStruct any, optSetters ...OptSetter) (struct_ *Struct, err error) {
+	var packagePath string
+	var structName string
+	if structPath, ok := tgtStruct.(string); ok {
+		// github.com/knaka/go-pinfomap.Struct
+		fields := strings.Split(structPath, ".")
+		switch len(fields) {
+		case 0:
+			log.Fatalf("Invalid struct path: %v", structPath)
+		case 1:
+			// "foo" -> struct "foo" in the current (current directory) package
+			packagePath = "."
+			structName = fields[0]
+		default:
+			// "github.com/knaka/foo/bar.baz" -> struct "baz" in the package "github.com/knaka/foo/bar"
+			packagePath = strings.Join(fields[0:len(fields)-1], ".")
+			structName = fields[len(fields)-1]
+		}
+	} else {
+		type_ := reflect.TypeOf(tgtStruct)
+		if type_.Kind() != reflect.Struct {
+			panic("Not a struct")
+		}
+		packagePath = type_.PkgPath()
+		structName = type_.Name()
+	}
+	structInfo := &ctorParams{}
+	for _, optSetter := range optSetters {
+		optSetter(structInfo)
 	}
 	cfg := &packages.Config{
 		Mode:  packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax,
@@ -271,7 +222,7 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 		},
 		// Correct?
 		PackagePath: pkg.PkgPath,
-		Data:        params.Data,
+		Data:        structInfo.Data,
 	}
 	for _, name := range pkg.Types.Scope().Names() {
 		t := pkg.Types.Scope().Lookup(name).Type()
@@ -286,10 +237,6 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 			field := st.Field(i)
 			fieldName := field.Name()
 			type_ := field.Type()
-			//isPointer := (func() bool {
-			//	_, ok := type_.(*types.Pointer)
-			//	return ok
-			//})()
 			structTag := st.Tag(i)
 			fieldX := &Field{
 				Name: fieldName,
@@ -301,7 +248,7 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 				Params: map[string]any{},
 			}
 			struct_.Fields = append(struct_.Fields, fieldX)
-			for _, tag := range params.Tags {
+			for _, tag := range structInfo.Tags {
 				tagStr, ok := reflect.StructTag(structTag).Lookup(tag)
 				if !ok {
 					continue
@@ -342,10 +289,10 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 			// Receiver type
 			//log.Println("type:", recv.Type())
 			//log.Println(recv.Pos())
-			//params := sig.Params()
-			//log.Println(params.Len())
-			//for j := 0; j < params.Len(); j++ {
-			//	param := params.At(j)
+			//structInfo := sig.Params()
+			//log.Println(structInfo.Len())
+			//for j := 0; j < structInfo.Len(); j++ {
+			//	param := structInfo.At(j)
 			//	//log.Println("name:", param.Name(), param.Type())
 			//}
 			results := sig.Results()
@@ -377,85 +324,4 @@ func GetStructInfoByName(packagePath string, structName string, params *GetStruc
 		}
 	}
 	return
-}
-
-type GenerateParams struct {
-	ShouldRunGoImports bool
-	Filename           string
-}
-
-//goland:noinspection GoUnusedExportedFunction, GoUnnecessarilyExportedIdentifiers
-func GenerateGo(tmpl string, data any, params *GenerateParams) (err error) {
-	initLib()
-	if params == nil {
-		params = &GenerateParams{}
-	}
-	params.ShouldRunGoImports = true
-	return Generate(tmpl, data, params)
-}
-
-func Generate(tmpl string, data any, params *GenerateParams) (err error) {
-	initLib()
-	if params == nil {
-		params = &GenerateParams{}
-	}
-	outPath := filepath.Join(OutputDir(), getOutputBasename())
-	if params.Filename != "" {
-		outPath = params.Filename
-	}
-	if err != nil {
-		return
-	}
-	tmplParsed := template.Must(template.New("aaa").Funcs(map[string]any{
-		"GeneratorName": getGeneratorName,
-	}).Parse(tmpl))
-	buf := new(bytes.Buffer)
-	err = tmplParsed.Execute(buf, data)
-	if err != nil {
-		return
-	}
-	outDir, err := filepath.Abs(filepath.Dir(outPath))
-	if err != nil {
-		return
-	}
-	err = os.MkdirAll(outDir, 0755)
-	if err != nil {
-		return
-	}
-	err = os.WriteFile(outPath, buf.Bytes(), 0644)
-	if err != nil {
-		return
-	}
-	if params.ShouldRunGoImports {
-		//cmd := exec.Command("go", "fmt", outPath)
-		//cmd.Stdout = os.Stdout
-		//cmd.Stderr = os.Stderr
-		//err = cmd.Run()
-		//if err != nil {
-		//	// Rename the file not to be used as a source file.
-		//	_ = os.Rename(outPath, outPath+".err")
-		//	return err
-		//}
-		sourceFile := goimports.NewSourceFile( /* data.PackagePath */ "?", outPath)
-		_ = goimports.WithRemovingUnusedImports(sourceFile)
-		_ = goimports.WithCodeFormatting(sourceFile)
-		fixed, _, differs, err := sourceFile.Fix()
-		if err != nil {
-			// Rename the file not to be used as a source file.
-			_ = os.Rename(outPath, outPath+".err")
-			return err
-		}
-		if differs {
-			err = os.WriteFile(outPath, fixed, 0644)
-			if err != nil {
-				return err
-			}
-		}
-		_ = os.Remove(outPath + ".err")
-	}
-	return
-}
-
-func GetOutputPath(elem ...string) string {
-	return filepath.Join(OutputDir(), filepath.Join(elem...))
 }

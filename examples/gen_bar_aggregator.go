@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	structInfo, err := pinfomap.GetStructInfo(".", "Bar", map[string]any{
+	structInfo, err := pinfomap.NewStructInfo(".", "Bar", map[string]any{
 		"AdditionalComment": "This is a comment.",
 	})
 	if err != nil {

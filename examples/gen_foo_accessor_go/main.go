@@ -3,33 +3,36 @@ package main
 import (
 	"github.com/knaka/go-pinfomap"
 	"github.com/knaka/go-pinfomap/examples"
+	"github.com/knaka/go-pinfomap/generator"
+
+	"log"
 )
 
 func main() {
-	// GetStructInfo extracts information about the struct of the object passed as an argument.
-	structInfo, err := pinfomap.GetStructInfo(examples.Foo{},
-		&pinfomap.GetStructInfoParams{
-			// Tags to consider when extracting information. In this case, it looks for "accessor" tag.
-			Tags: []string{"accessor"},
-		},
-	)
-
-	// Alternatively, specify the package and the struct by name to extract its information.
-	// This method might be useful when the struct is not directly accessible or if you want to reference it dynamically.
-
-	//structInfo, err := pinfomap.GetStructInfoByName(".", "Foo", ...)
-
+	// Extracts information about a struct by passing an instance of the struct.
+	// Here, we're using 'examples.Foo{}' with an option to include fields tagged as "accessor".
+	structInfo, err := pinfomap.NewStructInfo(examples.Foo{}, pinfomap.WithTags("accessor"))
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to get struct info: %v", err)
 	}
 
-	// Additional data that can be passed to the template.
+	// You can also specify a struct by its name to extract information.
+	// Use just the name "Foo" for structs in the current package or provide the full path
+	// like "github.com/knaka/foo/bar.baz" for the other structs.
+	// This approach is useful for accessing structs dynamically or when they're not directly accessible.
+	_, err = pinfomap.NewStructInfo("Foo", pinfomap.WithTags("accessor"))
+	if err != nil {
+		log.Fatalf("failed to get struct info: %v", err)
+	}
+
+	// Adding additional data to the 'structInfo' which can be utilized in the template.
 	structInfo.Data = map[string]any{
 		"AdditionalComment": "This is a comment.",
 	}
 
-	err = pinfomap.GenerateGo(pinfomap.AccessorTemplate, structInfo, nil)
+	// Generates Go code based on the 'AccessorTemplate' and the provided 'structInfo'.
+	err = generator.GenerateGo(pinfomap.AccessorTemplate, structInfo)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to generate go: %v", err)
 	}
 }

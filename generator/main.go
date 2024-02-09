@@ -103,6 +103,9 @@ func Generate(tmpl string, data any, optSetters ...OptSetter) (err error) {
 	initLib()
 	params := &GenerateParams{}
 	for _, setter := range optSetters {
+		if setter == nil {
+			continue
+		}
 		setter(params)
 	}
 	outPath := filepath.Join(OutputDir(), getOutputBasename())

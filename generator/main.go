@@ -80,26 +80,26 @@ func getGeneratorName() string {
 }
 
 //goland:noinspection GoUnusedExportedFunction, GoUnnecessarilyExportedIdentifiers
-func GenerateGo(tmpl string, data any, optSetters ...OptSetter) (err error) {
+func GenerateGo(tmpl string, data any, optSetters ...GeneratorOptSetter) (err error) {
 	initLib()
 	return Generate(tmpl, data, append(optSetters, FormatsGo(true))...)
 }
 
-type OptSetter func(*GenerateParams)
+type GeneratorOptSetter func(*GenerateParams)
 
-func FormatsGo(b bool) OptSetter {
+func FormatsGo(b bool) GeneratorOptSetter {
 	return func(params *GenerateParams) {
 		params.ShouldRunGoImports = b
 	}
 }
 
-func WithFilename(filename string) OptSetter {
+func WithFilename(filename string) GeneratorOptSetter {
 	return func(params *GenerateParams) {
 		params.Filename = filename
 	}
 }
 
-func Generate(tmpl string, data any, optSetters ...OptSetter) (err error) {
+func Generate(tmpl string, data any, optSetters ...GeneratorOptSetter) (err error) {
 	initLib()
 	params := &GenerateParams{}
 	for _, setter := range optSetters {

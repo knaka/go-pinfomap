@@ -108,7 +108,10 @@ func Generate(tmpl string, data any, optSetters ...GeneratorOptSetter) (err erro
 		}
 		setter(params)
 	}
-	outPath := filepath.Join(OutputDir(), getOutputBasename())
+	outPath := params.Filename
+	if outPath == "" {
+		outPath = filepath.Join(OutputDir(), getOutputBasename())
+	}
 	tmplParsed := template.Must(template.New("aaa").Funcs(map[string]any{
 		"GeneratorName": getGeneratorName,
 	}).Parse(tmpl))

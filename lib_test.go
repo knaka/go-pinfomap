@@ -1,9 +1,13 @@
 package pinfomap
 
 import (
+	"github.com/knaka/go-pinfomap/examples"
 	"github.com/knaka/go-pinfomap/stringer/testdata"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/tools/go/packages"
 	"testing"
+
+	. "github.com/knaka/go-utils"
 )
 
 func TestNewIntTypeInfo(t *testing.T) {
@@ -33,4 +37,11 @@ func TestNewIntTypeInfo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetStructInfo(t *testing.T) {
+	structInfo := V(NewStructInfo(examples.Foo{}))
+	assert.Equal(t, structInfo.StructName, "Foo")
+	assert.Equal(t, structInfo.Package.Name, "examples")
+	assert.Equal(t, structInfo.Package.Path, "github.com/knaka/go-pinfomap/examples")
 }

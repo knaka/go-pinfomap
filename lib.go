@@ -164,15 +164,15 @@ func (p *Package) GetTypes() []string {
 	return ret
 }
 
-type OptSetter func(*ctorParams)
+type InspectorOptSetter func(*ctorParams)
 
-func WithTags(tags ...string) OptSetter {
+func WithTags(tags ...string) InspectorOptSetter {
 	return func(params *ctorParams) {
 		params.Tags = tags
 	}
 }
 
-func WithData(data any) OptSetter {
+func WithData(data any) InspectorOptSetter {
 	return func(params *ctorParams) {
 		params.Data = data
 	}
@@ -218,7 +218,7 @@ func getName(target any) (packagePath, name string, err error) {
 	return
 }
 
-func NewStructInfo(target any, optSetters ...OptSetter) (struct_ *Struct, err error) {
+func NewStructInfo(target any, optSetters ...InspectorOptSetter) (struct_ *Struct, err error) {
 	packagePath, structName, err := getName(target)
 	if err != nil {
 		return

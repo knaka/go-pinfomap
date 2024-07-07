@@ -1,14 +1,18 @@
 package pinfomap
 
 import (
+	"github.com/knaka/go-pinfomap/stringer"
 	"go/types"
 	"golang.org/x/tools/go/packages"
 	"log"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
+
+	. "github.com/knaka/go-utils"
 )
 
 type Field struct {
@@ -174,10 +178,8 @@ func WithData(data any) OptSetter {
 	}
 }
 
-func NewStructInfo(tgtStruct any, optSetters ...OptSetter) (struct_ *Struct, err error) {
-	var packagePath string
-	var structName string
-	if structPath, ok := tgtStruct.(string); ok {
+func getName(target any) (packagePath, name string, err error) {
+	if structPath, ok := target.(string); ok {
 		// github.com/knaka/go-pinfomap.Struct
 		fields := strings.Split(structPath, ".")
 		switch len(fields) {
@@ -186,19 +188,40 @@ func NewStructInfo(tgtStruct any, optSetters ...OptSetter) (struct_ *Struct, err
 		case 1:
 			// "foo" -> struct "foo" in the current (current directory) package
 			packagePath = "."
-			structName = fields[0]
+			name = fields[0]
 		default:
 			// "github.com/knaka/foo/bar.baz" -> struct "baz" in the package "github.com/knaka/foo/bar"
 			packagePath = strings.Join(fields[0:len(fields)-1], ".")
-			structName = fields[len(fields)-1]
+			name = fields[len(fields)-1]
 		}
 	} else {
-		type_ := reflect.TypeOf(tgtStruct)
-		if type_.Kind() != reflect.Struct {
-			panic("Not a struct")
+		type_ := reflect.TypeOf(target)
+		kind := type_.Kind()
+		if !slices.Contains([]reflect.Kind{
+			reflect.Struct,
+			reflect.Int,
+			reflect.Int8,
+			reflect.Int16,
+			reflect.Int32,
+			reflect.Int64,
+			reflect.Uint,
+			reflect.Uint8,
+			reflect.Uint16,
+			reflect.Uint32,
+			reflect.Uint64,
+		}, kind) {
+			panic("Invalid type")
 		}
 		packagePath = type_.PkgPath()
-		structName = type_.Name()
+		name = type_.Name()
+	}
+	return
+}
+
+func NewStructInfo(target any, optSetters ...OptSetter) (struct_ *Struct, err error) {
+	packagePath, structName, err := getName(target)
+	if err != nil {
+		return
 	}
 	structInfo := &ctorParams{}
 	for _, optSetter := range optSetters {
@@ -322,6 +345,32 @@ func NewStructInfo(tgtStruct any, optSetters ...OptSetter) (struct_ *Struct, err
 				}
 			}
 		}
+	}
+	return
+}
+
+type IntConst struct {
+	Name  string
+	Value uint64
+}
+
+type IntType struct {
+	Name   string
+	Consts []*IntConst
+}
+
+func NewIntTypeInfo(target any) (intType IntType, err error) {
+	packagePath, intTypeName, err := getName(target)
+	if err != nil {
+		return
+	}
+	intType.Name = intTypeName
+	dtoValues := V(stringer.NewIntTypeInfo(packagePath, intTypeName))
+	for _, dtoValue := range dtoValues {
+		intType.Consts = append(intType.Consts, &IntConst{
+			Name:  dtoValue.Name,
+			Value: dtoValue.Value,
+		})
 	}
 	return
 }
